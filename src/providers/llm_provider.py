@@ -204,8 +204,40 @@ class DeepSeekProvider:
 # ---------------------------------------------------------------------------
 
 
+class FallbackProvider:
+    """
+    Wraps multiple providers in priority order.
+    On each `complete()` call, tries providers in sequence until one succeeds.
+    This handles keys that are set but fail at runtime (rate limits, bad key, etc.).
+    """
+
+    def __init__(self, providers: list) -> None:
+        self._providers = providers
+
+    @property
+    def name(self) -> str:
+        return " -> ".join(p.name for p in self._providers)
+
+    def complete(self, prompt: str, system: str = "") -> str:
+        last_exc: Exception = RuntimeError("No providers available")
+        for provider in self._providers:
+            try:
+                result = provider.complete(prompt, system)
+                return result
+            except Exception as exc:
+                logger.warning(f"Provider '{provider.name}' failed: {exc}. Trying next…")
+                last_exc = exc
+        raise last_exc
+
+
 def build_llm_provider(provider_name: str | None = None) -> LLMProvider:
-    """Return the best available LLM provider."""
+    """
+    Return the best available LLM provider.
+
+    Priority: Anthropic → OpenAI → DeepSeek.
+    Only providers with a key set are included.
+    If a specific provider_name is requested, use that first then fall back.
+    """
     settings = get_settings()
     name = provider_name or settings.llm.provider
 
@@ -218,17 +250,28 @@ def build_llm_provider(provider_name: str | None = None) -> LLMProvider:
     if name not in registry:
         raise ValueError(f"Unknown LLM provider: {name!r}. Choose from {list(registry)}")
 
-    provider = registry[name]()
+    # Build list of providers that have keys, starting with the preferred one
+    key_map = {
+        "anthropic": settings.anthropic_api_key,
+        "openai": settings.openai_api_key,
+        "deepseek": settings.deepseek_api_key,
+    }
+    # Fallback order: preferred first, then others
+    fallback_order = [name] + [k for k in ["anthropic", "openai", "deepseek"] if k != name]
+    active = []
+    for pname in fallback_order:
+        if key_map.get(pname):
+            cfg = LLMConfig(provider=pname)  # type: ignore[arg-type]
+            active.append(registry[pname](cfg))
 
-    # Graceful fallback chain: if primary has no key, try others.
-    # When falling back we build a fresh LLMConfig scoped to the new provider
-    # so resolved_model() returns the correct model name (not the Anthropic one).
-    if name == "anthropic" and not settings.anthropic_api_key:
-        if settings.openai_api_key:
-            logger.warning("Falling back to OpenAI provider")
-            return OpenAIProvider(LLMConfig(provider="openai"))
-        if settings.deepseek_api_key:
-            logger.warning("Falling back to DeepSeek provider")
-            return DeepSeekProvider(LLMConfig(provider="deepseek"))
+    if not active:
+        raise RuntimeError(
+            "No LLM API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY in your .env file."
+        )
 
-    return provider  # type: ignore[return-value]
+    if len(active) == 1:
+        logger.info(f"Using {active[0].name} provider")
+        return active[0]  # type: ignore[return-value]
+
+    logger.info(f"Using provider chain: {' -> '.join(p.name for p in active)}")
+    return FallbackProvider(active)  # type: ignore[return-value]
