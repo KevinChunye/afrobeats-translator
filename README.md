@@ -11,6 +11,9 @@ Built with Claude + OpenAI. Works with lyrics text, raw input, or audio files.
 ## Demo
 
 ### Wizkid — Essence
+
+![Essence demo](assets/demo-essence.png)
+
 ```
   #   Original                                   Natural Translation                        Slang / Notes
   1   You don cast your spell on me, can't        You've enchanted me, I can't explain it
@@ -25,6 +28,9 @@ Built with Claude + OpenAI. Works with lyrics text, raw input, or audio files.
 ---
 
 ### 1da Banton — No Wahala
+
+![No Wahala demo](assets/demo-no-wahala.png)
+
 ```
   #   Original                                        Natural Translation
   1   She no get wahala, she no get drama             She has no problems, no drama
@@ -59,7 +65,7 @@ Built with Claude + OpenAI. Works with lyrics text, raw input, or audio files.
 ### 1. Clone & install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/afrobeats-translator.git
+git clone https://github.com/KevinChunye/afrobeats-translator.git
 cd afrobeats-translator
 
 python3 -m venv .venv
@@ -87,6 +93,9 @@ cp .env.example .env
 ```bash
 # Translate a song (uses mock lyrics DB)
 python main.py translate-song --song "Essence" --artist "Wizkid"
+
+# Translate 1da Banton — No Wahala
+python main.py translate-song --song "No Wahala" --artist "1da Banton"
 
 # Translate a lyrics text file
 python main.py translate-lyrics --input-file data/sample_lyrics.txt
@@ -163,6 +172,7 @@ afrobeats-translator/
   main.py                         CLI entry point
   requirements.txt
   .env.example
+  assets/                         Demo screenshots
   data/
     sample_lyrics.txt             Sample lyrics for offline testing
   src/
