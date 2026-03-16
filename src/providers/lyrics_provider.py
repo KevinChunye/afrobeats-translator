@@ -1,22 +1,19 @@
 """
 Lyrics provider abstractions.
 
-Implementations:
-  - MockLyricsProvider     — returns sample data; always works, no API needed
-  - GeniusLyricsProvider   — scrapes Genius via lyricsgenius (TODO: optional dep)
-  - ManualLyricsProvider   — wraps user-supplied raw text
+Provider chain (best → fallback):
+  1. GeniusLyricsProvider   — best coverage; needs GENIUS_ACCESS_TOKEN + lyricsgenius
+  2. LyricsOvhProvider      — free public API, no key, good Afrobeats coverage ✅
+  3. MockLyricsProvider     — hardcoded demo songs; CLI testing only
 
-The factory `build_lyrics_provider()` returns the best available backend.
-
-TODO: Integrate a dedicated lyrics API (e.g. Genius, AZLyrics, Musixmatch).
-      Genius requires a free client access token at https://genius.com/api-clients
-      and the `lyricsgenius` pip package.
+The factory always tries LyricsOvh first (no setup needed) so ANY song works
+out of the box for the web UI.
 """
 
 from __future__ import annotations
 
-import abc
 from typing import Protocol
+from urllib.parse import quote
 
 from ..logger import get_logger
 from ..models import RawLyrics
@@ -139,6 +136,59 @@ class ManualLyricsProvider:
 
 
 # ---------------------------------------------------------------------------
+# lyrics.ovh — free public API, no key required
+# ---------------------------------------------------------------------------
+
+
+class LyricsOvhProvider:
+    """
+    Fetches lyrics from lyrics.ovh — a free, open API with no authentication.
+    Good coverage of mainstream and Afrobeats artists.
+
+    API: GET https://api.lyrics.ovh/v1/{artist}/{title}
+    Docs: https://lyricsovh.docs.apiary.io/
+
+    Raises ValueError (song not found) or RuntimeError (network error).
+    The pipeline catches both and surfaces a user-friendly message.
+    """
+
+    name = "lyrics.ovh"
+    _BASE = "https://api.lyrics.ovh/v1"
+
+    def fetch(self, song_title: str, artist: str) -> RawLyrics:
+        import requests
+
+        url = f"{self._BASE}/{quote(artist)}/{quote(song_title)}"
+        logger.info(f"Fetching lyrics from lyrics.ovh: {url}")
+
+        try:
+            resp = requests.get(url, timeout=12)
+        except requests.RequestException as exc:
+            raise RuntimeError(f"lyrics.ovh network error: {exc}")
+
+        if resp.status_code == 404:
+            raise ValueError(
+                f'Lyrics not found for "{song_title}" by "{artist}". '
+                "Try the 'Paste lyrics' option below the search box."
+            )
+        resp.raise_for_status()
+
+        lyrics_text = resp.json().get("lyrics", "").strip()
+        if not lyrics_text:
+            raise ValueError(
+                f'Empty lyrics returned for "{song_title}" by "{artist}". '
+                "Try pasting the lyrics directly."
+            )
+
+        return RawLyrics(
+            song_title=song_title,
+            artist=artist,
+            raw_text=lyrics_text,
+            source="lyrics.ovh",
+        )
+
+
+# ---------------------------------------------------------------------------
 # Genius (optional — requires `lyricsgenius` + GENIUS_ACCESS_TOKEN)
 # ---------------------------------------------------------------------------
 
@@ -191,13 +241,24 @@ class GeniusLyricsProvider:
 
 
 def build_lyrics_provider(prefer_real: bool = True) -> LyricsProvider:
-    """Return Genius if available, otherwise fall back to Mock."""
+    """
+    Return the best available lyrics provider.
+
+    Chain: Genius (if token set) → lyrics.ovh (free, default) → Mock (CLI fallback)
+    """
     if prefer_real:
+        # Genius: best quality, requires token
         try:
-            provider = GeniusLyricsProvider()
-            if provider._client is not None:
-                return provider
+            genius = GeniusLyricsProvider()
+            if genius._client is not None:
+                logger.info("Using GeniusLyricsProvider")
+                return genius
         except Exception:
             pass
-    logger.info("Using MockLyricsProvider (no real lyrics API configured)")
+
+        # lyrics.ovh: free, no key, works for most mainstream + Afrobeats songs
+        logger.info("Using LyricsOvhProvider (free, no API key required)")
+        return LyricsOvhProvider()
+
+    logger.info("Using MockLyricsProvider (offline/CLI mode)")
     return MockLyricsProvider()
