@@ -220,13 +220,15 @@ def build_llm_provider(provider_name: str | None = None) -> LLMProvider:
 
     provider = registry[name]()
 
-    # Graceful fallback chain: if primary has no key, try others
+    # Graceful fallback chain: if primary has no key, try others.
+    # When falling back we build a fresh LLMConfig scoped to the new provider
+    # so resolved_model() returns the correct model name (not the Anthropic one).
     if name == "anthropic" and not settings.anthropic_api_key:
         if settings.openai_api_key:
             logger.warning("Falling back to OpenAI provider")
-            return OpenAIProvider()
+            return OpenAIProvider(LLMConfig(provider="openai"))
         if settings.deepseek_api_key:
             logger.warning("Falling back to DeepSeek provider")
-            return DeepSeekProvider()
+            return DeepSeekProvider(LLMConfig(provider="deepseek"))
 
     return provider  # type: ignore[return-value]
