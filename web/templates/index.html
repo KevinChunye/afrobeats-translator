@@ -150,7 +150,7 @@
 
     /* ── Results ───────────────────────────────────────────────── */
     #results {
-      max-width: 1100px; margin: 0 auto;
+      max-width: 1500px; margin: 0 auto;
       padding: 0 1.5rem 5rem;
       animation: fadeUp .4s ease both;
     }
@@ -205,10 +205,11 @@
 
     .lines-table-wrap {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); overflow: hidden;
+      border-radius: var(--radius); overflow-x: auto;
     }
     table.lines-table {
       width: 100%; border-collapse: collapse; font-size: 0.88rem;
+      table-layout: fixed;
     }
     .lines-table thead th {
       text-align: left; font-size: 0.68rem; text-transform: uppercase;
@@ -216,10 +217,11 @@
       padding: 0.75rem 1rem;
       background: var(--surface2); border-bottom: 1px solid var(--border);
     }
-    .lines-table thead th:first-child { width: 36px; text-align: center; }
-    .lines-table thead th:nth-child(2) { width: 28%; }
-    .lines-table thead th:nth-child(3) { width: 37%; }
-    /* 4th col: Notes takes remaining space */
+    /* # = tiny fixed, original = 20%, translation = 25%, notes = rest (~50%) */
+    .lines-table thead th:first-child { width: 44px; text-align: center; }
+    .lines-table thead th:nth-child(2) { width: 20%; }
+    .lines-table thead th:nth-child(3) { width: 25%; }
+    /* 4th col: Notes gets the majority of space automatically */
 
     .lines-table tbody tr {
       border-bottom: 1px solid var(--border);
@@ -232,7 +234,10 @@
     .lines-table tbody tr.conf-mid  { border-left-color: var(--gold); }
     .lines-table tbody tr.conf-low  { border-left-color: var(--red); }
 
-    .lines-table td { padding: 0.9rem 1rem; vertical-align: top; }
+    .lines-table td {
+      padding: 0.9rem 1rem; vertical-align: top;
+      word-wrap: break-word; overflow-wrap: break-word;
+    }
     .lines-table td:first-child {
       text-align: center; color: var(--muted);
       font-size: 0.72rem; font-weight: 700;
@@ -530,7 +535,7 @@
           <td class="td-translation">${esc(lt.translation_natural || lt.translation_literal || lt.original_line)}</td>
           <td class="td-notes">
             ${notes || '<span style="color:var(--border)">—</span>'}
-            <br><span class="conf-pill">${conf}%</span>
+            <span class="conf-pill" style="display:inline-block;margin-top:0.4rem">${conf}%</span>
           </td>
         </tr>`;
     });
