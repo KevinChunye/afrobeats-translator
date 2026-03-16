@@ -12,9 +12,6 @@ AI pipeline that translates **Afrobeats & Amapiano** lyrics — Nigerian Pidgin,
 
 ## Demo
 
-### Wizkid — Essence
-![Essence demo](assets/demo-essence.png)
-
 ### 1da Banton — No Wahala
 ![No Wahala demo](assets/demo-no-wahala.png)
 
