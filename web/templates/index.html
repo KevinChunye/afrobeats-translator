@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎵 afrobeats-translator</title>
+  <style>
+    /* ── Variables ─────────────────────────────────────────────── */
+    :root {
+      --bg:          #08080F;
+      --surface:     #0F0F1C;
+      --surface2:    #161628;
+      --border:      #1E1E38;
+      --gold:        #F5A623;
+      --gold-dim:    rgba(245,166,35,.12);
+      --gold-glow:   rgba(245,166,35,.25);
+      --green:       #00C97F;
+      --green-dim:   rgba(0,201,127,.12);
+      --purple:      #8B5CF6;
+      --purple-dim:  rgba(139,92,246,.12);
+      --red:         #EF4444;
+      --text:        #EEEEF5;
+      --muted:       #6B6B90;
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 2rem;
+      background: rgba(8,8,15,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 1rem; font-weight: 700; letter-spacing: -.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .logo span { color: var(--gold); }
+    .usage-badge {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; font-weight: 600;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.3rem 0.8rem;
+      transition: all .3s;
+    }
+    .usage-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    .usage-badge.warn .dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+    .usage-badge.empty .dot { background: var(--red); box-shadow: none; animation: none; }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--gold);
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-glow);
+      border-radius: 99px;
+      padding: 0.3rem 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800; letter-spacing: -1px; line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .hero h1 em { font-style: normal; color: var(--gold); }
+    .hero p {
+      color: var(--muted); font-size: 1.05rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Search form ───────────────────────────────────────────── */
+    .search-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input[type="text"]:focus, textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-dim);
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    textarea { resize: vertical; min-height: 110px; font-family: inherit; }
+
+    .paste-toggle {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; color: var(--muted);
+      cursor: pointer; background: none; border: none;
+      padding: 0.25rem 0; margin-bottom: 0.75rem;
+      transition: color .2s;
+    }
+    .paste-toggle:hover { color: var(--gold); }
+    .paste-toggle svg { transition: transform .2s; }
+    .paste-toggle.open svg { transform: rotate(90deg); }
+
+    .lyrics-area { display: none; margin-bottom: 0.75rem; }
+    .lyrics-area.visible { display: block; }
+
+    .btn-translate {
+      width: 100%;
+      background: var(--gold);
+      color: #000;
+      font-size: 1rem; font-weight: 700;
+      border: none; border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-translate:hover { opacity: .9; }
+    .btn-translate:active { transform: scale(.99); }
+    .btn-translate:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Loading ───────────────────────────────────────────────── */
+    #loading {
+      text-align: center;
+      padding: 4rem 1.5rem;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 1.25rem;
+    }
+    .loading-steps {
+      display: flex; flex-direction: column; gap: 0.4rem;
+      align-items: center;
+    }
+    .step {
+      font-size: 0.82rem; color: var(--muted);
+      opacity: 0;
+      animation: fadeStep 1s ease forwards;
+    }
+    .step:nth-child(1) { animation-delay: 0.5s; }
+    .step:nth-child(2) { animation-delay: 2s; }
+    .step:nth-child(3) { animation-delay: 4s; }
+    .step.active { color: var(--gold); opacity: 1; }
+
+    /* ── Results container ─────────────────────────────────────── */
+    #results {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.5rem 5rem;
+      animation: fadeUp .4s ease;
+    }
+
+    /* ── Song header ───────────────────────────────────────────── */
+    .song-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;
+      margin-bottom: 1.25rem; padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .song-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -.5px; }
+    .song-artist { color: var(--muted); font-size: 1rem; margin-top: 0.15rem; }
+    .source-badge {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 99px; padding: 0.25rem 0.7rem;
+      white-space: nowrap; align-self: flex-start;
+    }
+
+    /* ── Summary card ──────────────────────────────────────────── */
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card h3 {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted); margin-bottom: 1rem;
+    }
+    .summary-meta {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .chip {
+      font-size: 0.78rem; font-weight: 600;
+      border-radius: 99px; padding: 0.25rem 0.75rem;
+    }
+    .chip-tone  { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
+    .chip-lang  { background: var(--gold-dim);   color: var(--gold);   border: 1px solid var(--gold-glow); }
+    .chip-slang { background: var(--surface2);   color: var(--muted);  border: 1px solid var(--border); }
+
+    .summary-theme {
+      font-size: 0.85rem; color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .summary-theme strong { color: var(--text); }
+
+    .summary-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: var(--text);
+      border-left: 2px solid var(--gold);
+      padding-left: 1rem;
+    }
+
+    /* ── Lines section ─────────────────────────────────────────── */
+    .lines-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .lines-header h3 {
+      font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted);
+    }
+    .lines-header hr {
+      flex: 1; border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    .line-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.6rem;
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 0.75rem 1rem;
+      align-items: start;
+      opacity: 0;
+      animation: fadeUp .35s ease forwards;
+      transition: border-color .2s;
+    }
+    .line-card:hover { border-color: rgba(245,166,35,.3); }
+    .line-num {
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--muted);
+      padding-top: 0.15rem;
+      text-align: right;
+    }
+    .line-content { min-width: 0; }
+    .line-original {
+      font-size: 0.88rem; color: var(--muted);
+      margin-bottom: 0.3rem;
+      font-style: italic;
+    }
+    .line-translation {
+      font-size: 0.97rem; font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .line-slang {
+      font-size: 0.8rem; color: var(--muted);
+      line-height: 1.55;
+    }
+    .line-slang strong { color: var(--gold); }
+    .ambiguous {
+      display: inline-block;
+      font-size: 0.72rem; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 0.1rem 0.4rem;
+      margin-left: 0.25rem;
+    }
+    .conf-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+    .conf-num {
+      font-size: 0.72rem; font-weight: 700;
+      white-space: nowrap;
+    }
+    .conf-bar {
+      width: 48px; height: 4px;
+      background: var(--border);
+      border-radius: 99px; overflow: hidden;
+    }
+    .conf-fill {
+      height: 100%; border-radius: 99px;
+      transition: width .6s ease;
+    }
+    .conf-high  .conf-num  { color: var(--green); }
+    .conf-high  .conf-fill { background: var(--green); }
+    .conf-mid   .conf-num  { color: var(--gold); }
+    .conf-mid   .conf-fill { background: var(--gold); }
+    .conf-low   .conf-num  { color: var(--red); }
+    .conf-low   .conf-fill { background: var(--red); }
+
+    /* ── Error ─────────────────────────────────────────────────── */
+    .error-banner {
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      color: #FCA5A5;
+      border-radius: var(--radius-sm);
+      padding: 0.8rem 1rem;
+      font-size: 0.88rem;
+      margin-top: 0.75rem;
+    }
+
+    /* ── Rate-limit modal ──────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end; justify-content: center;
+      padding: 1rem;
+      animation: fadeIn .2s ease;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      max-width: 480px; width: 100%;
+      animation: slideUp .3s ease;
+    }
+    .modal h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .modal p { color: var(--muted); font-size: 0.88rem; margin-bottom: 1.25rem; }
+    .modal input { margin-bottom: 0.75rem; }
+    .modal-actions { display: flex; gap: 0.5rem; }
+    .btn-secondary {
+      flex: 1; background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted); border-radius: var(--radius-sm);
+      padding: 0.7rem; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: border-color .2s;
+    }
+    .btn-secondary:hover { border-color: var(--muted); }
+    .btn-primary {
+      flex: 2; background: var(--gold);
+      border: none; color: #000;
+      border-radius: var(--radius-sm);
+      padding: 0.7rem; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .key-note {
+      font-size: 0.72rem; color: var(--muted);
+      margin-top: 0.5rem; margin-bottom: 0; text-align: center;
+    }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 2rem;
+      font-size: 0.78rem; color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--gold); }
+
+    /* ── Keyframes ─────────────────────────────────────────────── */
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+    @keyframes slideUp  { from { transform:translateY(24px); opacity:0; } to { transform:none; opacity:1; } }
+    @keyframes fadeStep { from { opacity:0; } to { opacity:1; } }
+
+    /* ── Mobile ────────────────────────────────────────────────── */
+    @media (max-width: 540px) {
+      header { padding: 0.75rem 1rem; }
+      .hero { padding: 3rem 1rem 2rem; }
+      .search-row { grid-template-columns: 1fr; }
+      .line-card { grid-template-columns: 22px 1fr auto; gap: 0.5rem 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<header>
+  <a class="logo" href="/">🎵 <span>afrobeats</span>-translator</a>
+  <div class="usage-badge" id="usage-badge">
+    <span class="dot"></span>
+    <span id="usage-text">3 free today</span>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Hero / Search -->
+  <section class="hero">
+    <div class="hero-eyebrow">🌍 Afrobeats · Amapiano · Nigerian Pidgin</div>
+    <h1>Every lyric understood.<br><em>Every word felt.</em></h1>
+    <p>Translate Afrobeats & Amapiano songs into plain English with slang breakdowns and cultural context.</p>
+
+    <div class="search-card">
+      <div class="search-row">
+        <input type="text" id="song"   placeholder="Song name  e.g. Essence" autocomplete="off" />
+        <input type="text" id="artist" placeholder="Artist  e.g. Wizkid"     autocomplete="off" />
+      </div>
+
+      <button class="paste-toggle" id="paste-toggle" onclick="togglePaste()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Or paste lyrics directly
+      </button>
+
+      <div class="lyrics-area" id="lyrics-area">
+        <textarea id="lyrics-text" placeholder="Paste lyrics here…&#10;e.g. She no get wahala, she no get drama&#10;Every time she dey smile, e dey calm my trauma"></textarea>
+      </div>
+
+      <div id="form-error"></div>
+      <button class="btn-translate" id="btn-translate" onclick="doTranslate()">
+        Translate →
+      </button>
+    </div>
+  </section>
+
+  <!-- Loading -->
+  <div id="loading" style="display:none">
+    <div class="spinner"></div>
+    <div class="loading-steps">
+      <div class="step">Fetching lyrics…</div>
+      <div class="step">Normalizing Nigerian Pidgin &amp; slang…</div>
+      <div class="step">Translating line by line…</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" style="display:none"></div>
+
+</main>
+
+<!-- ── Rate-limit modal ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h2>🔑 Add your own API key</h2>
+    <p>You've used your 3 free translations for today.<br>
+       Enter your <a href="https://console.anthropic.com" target="_blank" style="color:var(--gold)">Anthropic API key</a> to keep going — it's sent securely and never stored.</p>
+    <input type="password" id="modal-key" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary"   onclick="applyKey()">Continue →</button>
+    </div>
+    <p class="key-note">🔒 Your key is used only for this request and never saved.</p>
+  </div>
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<footer>
+  Built with Claude ·
+  <a href="https://github.com/KevinChunye/afrobeats-translator" target="_blank">GitHub</a> ·
+  <a href="https://console.anthropic.com" target="_blank">Get an API key</a>
+</footer>
+
+<script>
+  /* ── State ────────────────────────────────────────────────────── */
+  let usesRemaining = 3;
+  let savedUserKey  = '';
+
+  /* ── Paste toggle ─────────────────────────────────────────────── */
+  function togglePaste() {
+    const area   = document.getElementById('lyrics-area');
+    const toggle = document.getElementById('paste-toggle');
+    const open   = area.classList.toggle('visible');
+    toggle.classList.toggle('open', open);
+  }
+
+  /* ── Translate ────────────────────────────────────────────────── */
+  async function doTranslate(keyOverride) {
+    const song   = document.getElementById('song').value.trim();
+    const artist = document.getElementById('artist').value.trim();
+    const lyrics = document.getElementById('lyrics-text').value.trim();
+    const apiKey = keyOverride || savedUserKey || '';
+
+    clearError();
+
+    if (!song && !lyrics) {
+      showError('Enter a song name or paste lyrics first');
+      return;
+    }
+
+    setLoading(true);
+    document.getElementById('results').style.display = 'none';
+
+    try {
+      const body = { song, artist, user_api_key: apiKey || null };
+      if (lyrics) body.lyrics = lyrics;
+
+      const res  = await fetch('/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 429) { showModal(); return; }
+        throw new Error(data.detail || 'Translation failed');
+      }
+
+      renderResults(data);
+      if (data.uses_remaining >= 0) updateCounter(data.uses_remaining);
+
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ── Render results ───────────────────────────────────────────── */
+  function renderResults(data) {
+    const s   = data.summary || {};
+    const el  = document.getElementById('results');
+
+    // ---- Song header -----
+    let html = `
+      <div class="song-header">
+        <div>
+          <div class="song-title">${esc(data.song_title || 'Unknown Song')}</div>
+          <div class="song-artist">${data.artist ? 'by ' + esc(data.artist) : ''}</div>
+        </div>
+        <span class="source-badge">${esc(data.source || 'mock')}</span>
+      </div>`;
+
+    // ---- Summary card -----
+    if (s.plain_english_summary || s.main_theme) {
+      const toneChips  = (s.emotional_tone || '').split(/[,·]/).map(t => t.trim()).filter(Boolean)
+        .map(t => `<span class="chip chip-tone">${esc(t)}</span>`).join('');
+      const langChips  = (s.language_mix || [])
+        .map(l => `<span class="chip chip-lang">${esc(l)}</span>`).join('');
+      const slangChips = (s.recurring_slang || []).slice(0, 6)
+        .map(w => `<span class="chip chip-slang">${esc(w)}</span>`).join('');
+
+      html += `
+        <div class="summary-card">
+          <h3>Song Summary</h3>
+          ${s.main_theme ? `<div class="summary-theme"><strong>Theme:</strong> ${esc(s.main_theme)}</div>` : ''}
+          <div class="summary-meta">${toneChips}${langChips}${slangChips}</div>
+          ${s.plain_english_summary
+              ? `<div class="summary-text">${esc(s.plain_english_summary)}</div>`
+              : ''}
+        </div>`;
+    }
+
+    // ---- Lines header -----
+    html += `<div class="lines-header"><hr><h3>Line by line</h3><hr></div>`;
+
+    // ---- Line cards -----
+    (data.lines || []).forEach((lt, i) => {
+      const conf      = Math.round((lt.confidence || 0) * 100);
+      const confClass = conf >= 80 ? 'conf-high' : conf >= 50 ? 'conf-mid' : 'conf-low';
+      const delay     = Math.min(i * 40, 600);
+
+      let slangHtml = '';
+      if (lt.slang_explanation) slangHtml += `<strong>Slang:</strong> ${esc(lt.slang_explanation)} `;
+      if (lt.notes)             slangHtml += esc(lt.notes) + ' ';
+      if ((lt.ambiguous_phrases || []).length)
+        slangHtml += lt.ambiguous_phrases.map(p => `<span class="ambiguous">?&nbsp;${esc(p)}</span>`).join('');
+
+      html += `
+        <div class="line-card" style="animation-delay:${delay}ms">
+          <div class="line-num">${lt.line_number}</div>
+          <div class="line-content">
+            <div class="line-original">${esc(lt.original_line)}</div>
+            <div class="line-translation">${esc(lt.translation_natural || lt.translation_literal || lt.original_line)}</div>
+            ${slangHtml ? `<div class="line-slang">${slangHtml}</div>` : ''}
+          </div>
+          <div class="conf-wrap ${confClass}">
+            <div class="conf-num">${conf}%</div>
+            <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
+          </div>
+        </div>`;
+    });
+
+    el.innerHTML = html;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ── Counter ──────────────────────────────────────────────────── */
+  function updateCounter(n) {
+    usesRemaining = n;
+    const badge   = document.getElementById('usage-badge');
+    const text    = document.getElementById('usage-text');
+
+    badge.classList.remove('warn', 'empty');
+    if (n === 0) {
+      badge.classList.add('empty');
+      text.textContent = 'limit reached';
+    } else if (n === 1) {
+      badge.classList.add('warn');
+      text.textContent = '1 free left today';
+    } else {
+      text.textContent = `${n} free today`;
+    }
+  }
+
+  /* ── Modal ────────────────────────────────────────────────────── */
+  function showModal() {
+    document.getElementById('modal').style.display = 'flex';
+  }
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+  function closeModalOutside(e) {
+    if (e.target === document.getElementById('modal')) closeModal();
+  }
+  function applyKey() {
+    const key = document.getElementById('modal-key').value.trim();
+    if (!key) return;
+    savedUserKey = key;
+    closeModal();
+    doTranslate(key);
+  }
+
+  /* ── Helpers ──────────────────────────────────────────────────── */
+  function setLoading(on) {
+    document.getElementById('loading').style.display       = on ? 'block' : 'none';
+    document.getElementById('btn-translate').disabled      = on;
+    document.getElementById('btn-translate').textContent   = on ? 'Translating…' : 'Translate →';
+  }
+  function showError(msg) {
+    document.getElementById('form-error').innerHTML =
+      `<div class="error-banner">${esc(msg)}</div>`;
+  }
+  function clearError() {
+    document.getElementById('form-error').innerHTML = '';
+  }
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Enter key shortcut ───────────────────────────────────────── */
+  ['song','artist'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') doTranslate();
+    });
+  });
+</script>
+</body>
+</html>
