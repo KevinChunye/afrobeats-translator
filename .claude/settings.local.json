@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3.11 -m venv .venv)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/python -m pytest tests/ -v)",
+      "Bash(.venv/bin/python main.py translate-song --song \"Essence\" --artist \"Wizkid\")",
+      "Bash(ANTHROPIC_API_KEY=\"$ANTHROPIC_API_KEY\" .venv/bin/python main.py translate-song --song \"Essence\" --artist \"Wizkid\")",
+      "Bash(.venv/bin/python main.py translate-lyrics --input-file data/sample_lyrics.txt --song \"Sample\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
